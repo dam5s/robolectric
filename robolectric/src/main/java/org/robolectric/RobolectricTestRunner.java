@@ -211,7 +211,7 @@ public class RobolectricTestRunner extends BlockJUnit4ClassRunner {
 
   private ParallelUniverseInterface parallelUniverseInterface;
 
-  Statement methodBlock(final FrameworkMethod method, final Config config, final AndroidManifest appManifest, final SdkEnvironment sdkEnvironment) {
+  protected Statement methodBlock(final FrameworkMethod method, final Config config, final AndroidManifest appManifest, final SdkEnvironment sdkEnvironment) {
     return new Statement() {
       @Override
       public void evaluate() throws Throwable {
@@ -227,8 +227,7 @@ public class RobolectricTestRunner extends BlockJUnit4ClassRunner {
 
         final Method bootstrappedMethod;
         try {
-          //noinspection unchecked
-          bootstrappedMethod = bootstrappedTestClass.getMethod(method.getName());
+          bootstrappedMethod = getBootstrappedMethod(bootstrappedTestClass, method);
         } catch (NoSuchMethodException e) {
           throw new RuntimeException(e);
         }
@@ -256,7 +255,8 @@ public class RobolectricTestRunner extends BlockJUnit4ClassRunner {
             throw new RuntimeException(e);
           }
 
-          final Statement statement = helperTestRunner.methodBlock(new FrameworkMethod(bootstrappedMethod));
+          FrameworkMethod bootstrappedFrameworkMethod = getBootstrappedFrameworkMethod(bootstrappedMethod);
+          final Statement statement = getStatement(helperTestRunner, bootstrappedFrameworkMethod);
 
           // todo: this try/finally probably isn't right -- should mimic RunAfters? [xw]
           try {
@@ -279,6 +279,19 @@ public class RobolectricTestRunner extends BlockJUnit4ClassRunner {
         }
       }
     };
+  }
+
+  protected Statement getStatement(HelperTestRunner helperTestRunner, FrameworkMethod bootstrappedFrameworkMethod) {
+    return helperTestRunner.methodBlock(bootstrappedFrameworkMethod);
+  }
+
+  protected Method getBootstrappedMethod(Class bootstrappedTestClass, FrameworkMethod method) throws NoSuchMethodException {
+    //noinspection unchecked
+    return bootstrappedTestClass.getMethod(method.getName());
+  }
+
+  protected FrameworkMethod getBootstrappedFrameworkMethod(Method bootstrappedMethod) {
+    return new FrameworkMethod(bootstrappedMethod);
   }
 
   private void invokeBeforeClass(final Class clazz) throws Throwable {
